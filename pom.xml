@@ -53,8 +53,14 @@
           <artifactId>spark-streaming_${scala.base.version}</artifactId>
           <version>${spark.project.version}</version>
           <scope>provided</scope>
-      </dependency>
-      <dependency>
+     </dependency>
+     <dependency>
+  		<groupId>org.scalatest</groupId>
+  		<artifactId>scalatest_${scala.base.version}</artifactId>
+  		<version>2.2.6</version>
+  		<scope>test</scope>
+	  </dependency>
+      <dependency>      
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-iot-device-sdk-java</artifactId>
       <version>1.0.1</version>
@@ -137,6 +143,7 @@
         <version>2.13</version>
         <configuration>
           <useFile>false</useFile>
+          <skipTests>true</skipTests>
           <disableXmlReport>true</disableXmlReport>
           <includes>
             <include>**/*Test.*</include>
@@ -144,7 +151,25 @@
           </includes>
         </configuration>
       </plugin>
-      
+      <!-- enable scalatest -->
+	  <plugin>
+	  	<groupId>org.scalatest</groupId>
+	  	<artifactId>scalatest-maven-plugin</artifactId>
+	  	<version>1.0</version>
+	  	<configuration>
+	    	<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+	    	<junitxml>.</junitxml>
+	    	<filereports>WDF TestSuite.txt</filereports>
+	  	</configuration>
+	  <executions>
+	    <execution>
+	      <id>test</id>
+	      <goals>
+	        <goal>test</goal>
+	      </goals>
+	    </execution>
+	  </executions>
+	</plugin>
     </plugins>
   </build>
 </project>

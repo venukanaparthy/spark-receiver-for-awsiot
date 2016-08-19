@@ -34,21 +34,31 @@ class AwsEventHubReceiver (clientEndPoint: String,
                            privateKeyFile: String,
                            topicName: String, 
                            storageLevel: StorageLevel) extends 
-        Receiver [String](storageLevel)
-                                         {
+        Receiver [String](storageLevel)  {
+  
+  // AwsIoT client connection                
   private var awsIotClient: AWSIotMqttClient = _
     
   override def onStart(): Unit = {
-     setUp()
+      new Thread("Aws IoT Receiver") {
+        override def run() {
+          receiveAwsIoT()
+        }
+      }.start()     
   }
+  
   override def onStop(): Unit = {
     cleanUp()
   }
   
-  def setUp(): Unit = {
+  /*
+   *  Creates connection to Aws IoT Hub and 
+   *  receives messages from a topic   
+   */
+  private def receiveAwsIoT(): Unit = {
    
      try {
-          // key-store, password pair
+         // key-store, password pair
          val ksp = SslUtil.generateFromFilePath(certificateFile, privateKeyFile)
          
          //create aws iot client connection
@@ -57,7 +67,7 @@ class AwsEventHubReceiver (clientEndPoint: String,
          
          //connect to Aws IoT Hub
          awsIotClient.connect()
-         println("=?Connected to AwsIoT Hub")
+         println("=>Connected to AwsIoT Hub")
          
          // subscribe to a topic, register listener, call store on receiving the message
          awsIotClient.subscribe(new AWSIotTopic(topicName, AWSIotQos.QOS0){
@@ -69,16 +79,26 @@ class AwsEventHubReceiver (clientEndPoint: String,
 
          
        }catch{
-         case e: Exception =>
-           restart("Error occured while connecting. Restaring", e)
+         case t: Throwable  =>
+           restart("Error receiving messages from Aws IoT Hub", t)
        }
    }
    
-  def cleanUp(): Unit = {
-    if (awsIotClient !=null) {
-      awsIotClient.disconnect()
-      println("Disconnected from client")
-      awsIotClient = null      
+  /*
+   *  Closes connection to Aws IoT Hub
+   */
+  private def cleanUp(): Unit = {
+    try{
+      if (awsIotClient !=null) {
+        println("=>Disconnecting from Aws IoT Hub")
+        awsIotClient.disconnect()
+        println("=>Disconnected from Aws IoT Hub")            
+      }
+    }catch{
+      case t: Throwable =>
+        println("Error cleaning up : " + t.getMessage)
+    }finally {
+        awsIotClient = null
     }
   }
   
