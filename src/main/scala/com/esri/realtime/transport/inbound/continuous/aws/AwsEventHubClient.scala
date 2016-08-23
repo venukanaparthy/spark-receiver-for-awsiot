@@ -12,8 +12,10 @@ import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.Time
 import com.amazonaws.services.iot.client.AWSIotMqttClient
 import com.amazonaws.services.iot.client.AWSIotMessage
-import com.amazonaws.services.iot.client.AWSIotQos;
+import com.amazonaws.services.iot.client.AWSIotQos
 import java.util.Scanner
+import org.apache.spark.streaming.Duration
+import org.apache.spark.streaming.Duration
 
 object AwsEventHubClient{
   
@@ -81,21 +83,13 @@ object AwsEventHubClient{
      
       //awsIoTStream.print()
       
-      val idCountRDD = awsIoTStream.map{x => x.split(",")}.map{ y => (y(0), 1)}.reduceByKey(_+_)
+      val idCountRDD = awsIoTStream.map{x => x.split(",")}.map{ y => (y(0), 1)}.reduceByKeyAndWindow((a:Int, b:Int) => (a + b) , Seconds(30), Seconds(5))
       idCountRDD.print()
       
       //val idCountRDD = awsIoTStream.map{x => x.split(",")}.map{ y => (y(0), 1)}.reduceByKey(_+_)
       //idCountRDD.saveAsTextFiles(scratchDir, "txt")
-      
-      /*idCountRDD.foreachRDD{  
-            (msg: RDD[(String, Int)], batchTime: Time) =>{
-              msg.cache()
-              msg.map( x => 
-                println("%s,%d".format(x._1, x._2)))
-              msg.unpersist()
-            }          
-          }
-      */       
+       
+      ssc.checkpoint(scratchDir)
       ssc.start()     
       ssc.awaitTermination()
     
@@ -120,11 +114,12 @@ object AwsEventHubClient{
     //Connect to Aws Event Hub       
     pair = SslUtil.generateFromFilePath(certificateFile, privateKeyFile);
     val awsClientId = "clientId-%s".format(new BigInteger(128, new SecureRandom()).toString(32))
+    println("Connecting to Aws IoT Hub")   
     awsClient = new AWSIotMqttClient(clientEndPoint, awsClientId , pair.keyStore, pair.keyPass)
     awsClient.connect()  
     println("Connected to Aws IoT Hub")   
     var ix = 0
-    println("Writing " + eventsPerSecond + " e/s every " + intervalInMillis + " millis ...")
+    println("Writing " + eventsPerSecond + " e/s every " + intervalInMillis + " millis ...to topic: " + topicName)
     val doLoop = true    
     while(doLoop) {
         
